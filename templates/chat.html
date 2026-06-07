@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}IR Chat — CAIO{% endblock %}
+{% block page_title %}<i class="bi bi-chat-dots-fill me-2" style="color:#a78bfa"></i>Incident Response Chat{% endblock %}
+
+{% block content %}
+<div class="row g-4" style="height: calc(100vh - 160px);">
+  <!-- Sidebar: quick starters + settings -->
+  <div class="col-xl-3 d-none d-xl-flex flex-column gap-3">
+    <div class="panel flex-grow-1 overflow-auto">
+      <div class="panel-header">
+        <i class="bi bi-lightning-charge" style="color:#a78bfa"></i>
+        <span>Quick Starters</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-2">
+        {% for q in quick_starters %}
+        <button class="quick-starter-btn" data-question="{{ q }}">
+          {{ q }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-cpu"></i>
+        <span>Chat Settings</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-2">
+        <div>
+          <label class="form-label form-label-sm">Provider</label>
+          <select id="chatProvider" class="form-select form-select-sm">
+            <option value="ollama">🖥️ Ollama</option>
+            <option value="openai">🟢 OpenAI</option>
+            <option value="claude">🟣 Claude</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label form-label-sm">Model Override</label>
+          <input type="text" id="chatModel" class="form-control form-control-sm" placeholder="e.g. llama3.2">
+        </div>
+        <button id="clearChatBtn" class="btn btn-sm btn-outline-secondary w-100">
+          <i class="bi bi-trash me-1"></i>Clear Chat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="col-xl-9 d-flex flex-column" style="height: 100%;">
+    <div class="panel d-flex flex-column" style="height: 100%;">
+      <!-- Chat messages -->
+      <div id="chatMessages" class="chat-messages flex-grow-1 overflow-auto p-3">
+        <!-- Welcome message -->
+        <div class="chat-msg chat-msg-assistant">
+          <div class="chat-avatar"><i class="bi bi-shield-shaded"></i></div>
+          <div class="chat-bubble">
+            <div class="chat-header-meta">CAIO-IR <span class="text-muted">Cybersecurity Assistant</span></div>
+            <div class="markdown-output">Hello! I'm <strong>CAIO-IR</strong>, your incident response AI assistant. I specialize in:
+<ul>
+<li>🔍 Threat hunting &amp; forensics</li>
+<li>🛡️ Incident response &amp; triage</li>
+<li>🔬 Malware analysis guidance</li>
+<li>📋 MITRE ATT&amp;CK TTPs</li>
+<li>💻 Windows/Linux security commands</li>
+</ul>
+Ask me anything security-related. What are you investigating today?</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thinking indicator -->
+      <div id="thinkingIndicator" class="chat-thinking d-none px-3 pb-2">
+        <div class="chat-msg chat-msg-assistant">
+          <div class="chat-avatar"><i class="bi bi-shield-shaded"></i></div>
+          <div class="chat-bubble">
+            <div class="thinking-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="chat-input-area p-3 border-top">
+        <div class="d-flex gap-2">
+          <textarea id="chatInput" class="form-control chat-input" rows="2"
+            placeholder="Ask about incident response, threat hunting, forensics..."></textarea>
+          <button id="sendBtn" class="btn btn-chat-send" title="Send">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+        <div class="d-flex justify-content-between mt-2">
+          <div class="text-muted small"><kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline</div>
+          <button id="exportChatBtn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-download me-1"></i>Export Chat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let chatHistory = [];
+
+// Provider sync
+document.getElementById('globalProvider').addEventListener('change', function() {
+  document.getElementById('chatProvider').value = this.value;
+});
+document.getElementById('chatProvider').value = CAIO.getProvider();
+document.getElementById('chatProvider').addEventListener('change', function() {
+  document.getElementById('globalProvider').value = this.value;
+  localStorage.setItem('caio_provider', this.value);
+});
+
+// Quick starters
+document.querySelectorAll('.quick-starter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('chatInput').value = btn.dataset.question;
+    sendMessage();
+  });
+});
+
+// Send on Enter
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const provider = document.getElementById('chatProvider').value;
+  const model = document.getElementById('chatModel').value.trim();
+
+  // Add user message to UI
+  appendMessage('user', message);
+  chatHistory.push({ role: 'user', content: message });
+  input.value = '';
+
+  // Show thinking
+  document.getElementById('thinkingIndicator').classList.remove('d-none');
+  scrollToBottom();
+
+  document.getElementById('sendBtn').disabled = true;
+
+  try {
+    const resp = await fetch('/chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, provider, model, history: chatHistory.slice(-20) }),
+    });
+    const data = await resp.json();
+
+    document.getElementById('thinkingIndicator').classList.add('d-none');
+
+    if (data.error) {
+      appendMessage('assistant', `⚠️ Error: ${data.error}`);
+      return;
+    }
+
+    const response = data.response || '';
+    appendMessage('assistant', response);
+    chatHistory.push({ role: 'assistant', content: response });
+
+  } catch (err) {
+    document.getElementById('thinkingIndicator').classList.add('d-none');
+    appendMessage('assistant', `⚠️ Request failed: ${err.message}`);
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+function appendMessage(role, content) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg chat-msg-${role}`;
+
+  const avatar = role === 'assistant'
+    ? '<div class="chat-avatar"><i class="bi bi-shield-shaded"></i></div>'
+    : '<div class="chat-avatar chat-avatar-user"><i class="bi bi-person-fill"></i></div>';
+
+  const headerMeta = role === 'assistant'
+    ? '<div class="chat-header-meta">CAIO-IR <span class="text-muted">Cybersecurity Assistant</span></div>'
+    : '';
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'markdown-output';
+  CAIO.renderMarkdown(contentDiv, content);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+  bubble.innerHTML = headerMeta;
+  bubble.appendChild(contentDiv); 
+
+  if (role === 'assistant') {
+    div.innerHTML = avatar;
+    div.appendChild(bubble);
+  } else {
+    div.appendChild(bubble);
+    div.innerHTML += avatar;
+  }
+
+  container.appendChild(div);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const msgs = document.getElementById('chatMessages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// Clear chat
+document.getElementById('clearChatBtn').addEventListener('click', () => {
+  chatHistory = [];
+  const msgs = document.getElementById('chatMessages');
+  // Keep only welcome message
+  const welcome = msgs.querySelector('.chat-msg');
+  msgs.innerHTML = '';
+  if (welcome) msgs.appendChild(welcome);
+});
+
+// Export chat
+document.getElementById('exportChatBtn').addEventListener('click', () => {
+  const lines = chatHistory.map(m =>
+    `**${m.role === 'user' ? 'You' : 'CAIO-IR'}:** ${m.content}`
+  ).join('\n\n---\n\n');
+  CAIO.exportMarkdown(`# CAIO Incident Response Chat\n\n${lines}`, 'caio-chat-export.md');
+});
+</script>
+{% endblock %}

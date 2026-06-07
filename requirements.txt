@@ -1,0 +1,15 @@
+# CAIO — Cybersecurity AI Orchestrator
+# Install with: pip install -r requirements.txt
+
+flask>=3.0.0
+python-dotenv>=1.0.0
+openai>=1.30.0
+anthropic>=0.28.0
+requests>=2.31.0
+tiktoken>=0.7.0
+dnspython>=2.6.0
+whois==1.20240129.2
+# weasyprint>=62.0      # Pure Python, best option — install GTK runtime on Windows first
+# pdfkit>=1.0.0         # Needs wkhtmltopdf binary from https://wkhtmltopdf.org/
+# Development helpers (optional)
+# waitress>=3.0.0       # Production WSGI server for Windows

@@ -1,0 +1,169 @@
+import logging
+import io
+from datetime import datetime
+from flask import Blueprint, jsonify, render_template, request, send_file
+from modules.ai_client import query_ai_full
+
+logger = logging.getLogger(__name__)
+compliance_bp = Blueprint("compliance_report", __name__)
+
+SYSTEM_PROMPT = (
+    "You are a compliance auditor and GRC specialist. Map security findings to "
+    "regulatory frameworks and generate gap analysis reports."
+)
+
+COMPLIANCE_PROMPT = """Generate a compliance gap analysis report based on the following scan findings:
+
+=== SCAN FINDINGS ===
+{findings}
+
+=== TARGET FRAMEWORK ===
+Framework: {framework}
+Version: {version}
+
+=== ORGANIZATION CONTEXT ===
+Industry: {industry}
+Data types: {data_types}
+Current compliance status: {current_status}
+
+Generate:
+
+1. **Executive Summary**: Overall compliance posture
+2. **Control Mapping Table**:
+   | Finding | Severity | Control ID | Control Requirement | Current Status | Remediation |
+   |---------|----------|------------|---------------------|----------------|--------------|
+
+3. **Gap Analysis by Domain**:
+   - Access Control
+   - Incident Response
+   - Data Protection
+   - Risk Assessment
+   - Audit & Accountability
+
+4. **Priority Remediation Plan** (30/60/90 day)
+
+5. **Evidence Collection Guidance** for each gap
+
+6. **Compliance Score**: Percentage complete with breakdown
+
+Format for professional audit delivery."""
+
+
+FRAMEWORK_DETAILS = {
+    "nist_800_53": {
+        "name": "NIST SP 800-53 Rev 5",
+        "controls": ["AC-1", "AU-2", "CA-7", "CM-8", "IA-2", "IR-4", "RA-5", "SC-7", "SI-4"]
+    },
+    "iso_27001": {
+        "name": "ISO/IEC 27001:2022",
+        "controls": ["A.5.1", "A.6.1", "A.8.1", "A.8.2", "A.12.2", "A.16.1"]
+    },
+    "pci_dss": {
+        "name": "PCI DSS v4.0",
+        "controls": ["Req 1", "Req 2", "Req 3", "Req 5", "Req 6", "Req 7", "Req 8", "Req 10", "Req 11"]
+    }
+}
+
+
+@compliance_bp.route("/", methods=["GET"])
+def compliance_page():
+    return render_template("compliance_report.html")
+
+
+@compliance_bp.route("/generate", methods=["POST"])
+def generate_report():
+    data = request.get_json()
+    findings = (data.get("findings") or "").strip()
+    framework = data.get("framework", "nist_800_53")
+    industry = data.get("industry", "Technology")
+    data_types = data.get("data_types", "Customer information, internal data")
+    current_status = data.get("current_status", "Initial compliance assessment")
+    provider = data.get("provider", "ollama")
+    model = data.get("model", "")
+
+    if not findings:
+        return jsonify({"error": "No findings provided."}), 400
+
+    logger.info(f"[ComplianceReport] Generating {framework} report")
+
+    framework_info = FRAMEWORK_DETAILS.get(framework, FRAMEWORK_DETAILS["nist_800_53"])
+    
+    prompt = COMPLIANCE_PROMPT.format(
+        findings=findings[:10000],
+        framework=framework_info["name"],
+        version=framework_info["name"].split(" ")[-1],
+        industry=industry,
+        data_types=data_types,
+        current_status=current_status
+    )
+
+    result, tokens, cost = query_ai_full(
+        prompt, provider=provider, model=model or None, system=SYSTEM_PROMPT
+    )
+
+    return jsonify({
+        "report": result,
+        "framework": framework_info["name"],
+        "suggested_controls": framework_info["controls"],
+        "tokens_used": tokens,
+        "cost_estimate": cost,
+    })
+
+
+@compliance_bp.route("/export/pdf", methods=["POST"])
+def export_compliance_pdf():
+    """Export compliance report as PDF."""
+    data = request.get_json()
+    report_content = data.get("report", "")
+    
+    if not report_content:
+        return jsonify({"error": "No report content"}), 400
+    
+    # Get current timestamp safely
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Escape HTML special characters in report content
+    import html
+    escaped_content = html.escape(report_content).replace('\n', '<br>')
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>CAIO Compliance Report</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 2cm; }}
+            h1 {{ color: #e63946; border-bottom: 2px solid #e63946; }}
+            h2 {{ color: #2c3e66; margin-top: 20px; }}
+            table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background: #f0f0f0; }}
+            .footer {{ margin-top: 40px; text-align: center; font-size: 10px; color: #888; }}
+        </style>
+    </head>
+    <body>
+        <h1>CAIO Compliance Gap Analysis Report</h1>
+        <p>Generated: {current_time}</p>
+        <div class="content">
+            {escaped_content}
+        </div>
+        <div class="footer">
+            Generated by CAIO — Cybersecurity AI Orchestrator<br>
+            For internal audit use only
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name="caio-compliance-report.pdf"
+        )
+    except ImportError:
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}

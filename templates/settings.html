@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Settings — CAIO{% endblock %}
+{% block page_title %}<i class="bi bi-gear-fill me-2"></i>Settings{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- API Keys -->
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-key-fill text-accent"></i>
+        <span>API Keys</span>
+        <span class="ms-auto badge bg-success" id="saveStatus" style="display:none">Saved!</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-3">
+        <div class="alert alert-info small">
+          <i class="bi bi-shield-lock me-1"></i>
+          API keys are stored in your local <code>.env</code> file and <strong>never sent to the browser</strong>.
+          Existing keys are masked for security.
+        </div>
+
+        <div>
+          <label class="form-label">OpenAI API Key</label>
+          <div class="input-group">
+            <span class="input-group-text" style="color:#22d3ee"><i class="bi bi-key"></i></span>
+            <input type="password" id="openaiKey" class="form-control" placeholder="sk-... (leave blank to keep current)">
+            <span class="input-group-text key-status" id="openaiStatus"><i class="bi bi-question-circle text-muted"></i></span>
+          </div>
+          <div class="form-text">Used for GPT-4o and other OpenAI models.</div>
+        </div>
+
+        <div>
+          <label class="form-label">Anthropic API Key</label>
+          <div class="input-group">
+            <span class="input-group-text" style="color:#a78bfa"><i class="bi bi-key"></i></span>
+            <input type="password" id="claudeKey" class="form-control" placeholder="sk-ant-... (leave blank to keep current)">
+            <span class="input-group-text key-status" id="claudeStatus"><i class="bi bi-question-circle text-muted"></i></span>
+          </div>
+          <div class="form-text">Used for Claude models.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Settings -->
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-cpu text-accent"></i>
+        <span>Model Configuration</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-3">
+        <div>
+          <label class="form-label">Default AI Provider</label>
+          <select id="defaultProvider" class="form-select">
+            <option value="ollama">🖥️ Ollama (Local)</option>
+            <option value="openai">🟢 OpenAI</option>
+            <option value="claude">🟣 Claude</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label">Ollama Endpoint</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-hdd-network"></i></span>
+            <input type="text" id="ollamaEndpoint" class="form-control" placeholder="http://localhost:11434">
+            <button class="btn btn-outline-secondary" id="testOllama" type="button">
+              <i class="bi bi-plug me-1"></i>Test
+            </button>
+          </div>
+          <div id="ollamaTestResult" class="form-text"></div>
+        </div>
+
+        <div>
+          <label class="form-label">Default Ollama Model</label>
+          <input type="text" id="ollamaModel" class="form-control" placeholder="llama3.2">
+        </div>
+
+        <div>
+          <label class="form-label">Default OpenAI Model</label>
+          <input type="text" id="openaiModel" class="form-control" placeholder="gpt-4o">
+        </div>
+
+        <div>
+          <label class="form-label">Default Claude Model</label>
+          <input type="text" id="claudeModel" class="form-control" placeholder="claude-sonnet-4-20250514">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health check -->
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-header d-flex justify-content-between">
+        <span><i class="bi bi-heart-pulse text-accent"></i> Provider Health</span>
+        <button id="checkHealth" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-clockwise me-1"></i>Check Now
+        </button>
+      </div>
+      <div class="panel-body">
+        <div id="healthResults" class="d-flex flex-wrap gap-3">
+          <span class="text-muted small">Click "Check Now" to test all providers.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save button row -->
+  <div class="col-12">
+    <button id="saveSettings" class="btn btn-accent">
+      <i class="bi bi-floppy-fill me-1"></i> Save Settings
+    </button>
+    <button id="reloadSettings" class="btn btn-outline-secondary ms-2">
+      <i class="bi bi-arrow-clockwise me-1"></i> Reload
+    </button>
+  </div>
+
+  <!-- Ollama models list -->
+  <div class="col-12">
+    <div class="panel" id="ollamaModelsPanel" style="display:none">
+      <div class="panel-header">
+        <i class="bi bi-collection"></i>
+        <span>Installed Ollama Models</span>
+      </div>
+      <div class="panel-body">
+        <div id="ollamaModelsList" class="d-flex flex-wrap gap-2"></div>
+        <div class="text-muted small mt-2">
+          To pull a new model: <code>ollama pull &lt;model-name&gt;</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup guide -->
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-book"></i>
+        <span>Quick Setup Guide</span>
+      </div>
+      <div class="panel-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="setup-step">
+              <div class="step-num">1</div>
+              <div class="step-title">Ollama (Local AI)</div>
+              <div class="step-body">
+                Install from <a href="https://ollama.com" target="_blank">ollama.com</a>, then run:<br>
+                <code>ollama serve</code><br>
+                <code>ollama pull llama3.2</code>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="setup-step">
+              <div class="step-num">2</div>
+              <div class="step-title">OpenAI (Optional)</div>
+              <div class="step-body">
+                Get your key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>
+                and paste it above.
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="setup-step">
+              <div class="step-num">3</div>
+              <div class="step-title">Anthropic (Optional)</div>
+              <div class="step-body">
+                Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+                and paste it above.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadSettings() {
+  try {
+    const resp = await fetch('/settings/get');
+    const data = await resp.json();
+
+    // Provider
+    const dp = data.DEFAULT_PROVIDER;
+    if (dp?.value) document.getElementById('defaultProvider').value = dp.value;
+
+    // Ollama
+    const ep = data.OLLAMA_ENDPOINT;
+    if (ep?.value) document.getElementById('ollamaEndpoint').value = ep.value;
+
+    const om = data.OLLAMA_MODEL;
+    if (om?.value) document.getElementById('ollamaModel').value = om.value;
+
+    const gm = data.OPENAI_MODEL;
+    if (gm?.value) document.getElementById('openaiModel').value = gm.value;
+
+    const cm = data.CLAUDE_MODEL;
+    if (cm?.value) document.getElementById('claudeModel').value = cm.value;
+
+    // Key status icons
+    updateKeyStatus('openaiStatus', data.OPENAI_API_KEY?.set);
+    updateKeyStatus('claudeStatus', data.ANTHROPIC_API_KEY?.set);
+
+    // Masked placeholders
+    if (data.OPENAI_API_KEY?.masked) {
+      document.getElementById('openaiKey').placeholder = data.OPENAI_API_KEY.masked || 'Not set';
+    }
+    if (data.ANTHROPIC_API_KEY?.masked) {
+      document.getElementById('claudeKey').placeholder = data.ANTHROPIC_API_KEY.masked || 'Not set';
+    }
+
+  } catch (err) {
+    CAIO.toast('Failed to load settings: ' + err.message, 'error');
+  }
+}
+
+function updateKeyStatus(id, isSet) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = isSet
+    ? '<i class="bi bi-check-circle-fill text-success"></i>'
+    : '<i class="bi bi-x-circle-fill text-danger"></i>';
+}
+
+document.getElementById('saveSettings').addEventListener('click', async function() {
+  const payload = {
+    DEFAULT_PROVIDER: document.getElementById('defaultProvider').value,
+    OLLAMA_ENDPOINT: document.getElementById('ollamaEndpoint').value.trim(),
+    OLLAMA_MODEL: document.getElementById('ollamaModel').value.trim(),
+    OPENAI_MODEL: document.getElementById('openaiModel').value.trim(),
+    CLAUDE_MODEL: document.getElementById('claudeModel').value.trim(),
+  };
+
+  const openaiKey = document.getElementById('openaiKey').value.trim();
+  const claudeKey = document.getElementById('claudeKey').value.trim();
+  if (openaiKey) payload.OPENAI_API_KEY = openaiKey;
+  if (claudeKey) payload.ANTHROPIC_API_KEY = claudeKey;
+
+  CAIO.setLoading(this, true);
+  try {
+    const resp = await fetch('/settings/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (data.error) {
+      CAIO.toast(data.error, 'error');
+    } else {
+      CAIO.toast('Settings saved successfully!', 'success');
+      document.getElementById('openaiKey').value = '';
+      document.getElementById('claudeKey').value = '';
+      loadSettings();
+    }
+  } catch (err) {
+    CAIO.toast('Save failed: ' + err.message, 'error');
+  } finally {
+    CAIO.setLoading(this, false);
+  }
+});
+
+document.getElementById('reloadSettings').addEventListener('click', loadSettings);
+
+document.getElementById('testOllama').addEventListener('click', async function() {
+  CAIO.setLoading(this, true);
+  const resultEl = document.getElementById('ollamaTestResult');
+  resultEl.textContent = 'Testing connection...';
+
+  try {
+    const resp = await fetch('/settings/test', { method: 'POST' });
+    const data = await resp.json();
+    if (data.status === 'connected') {
+      resultEl.innerHTML = `<span class="text-success">✅ Connected! Models: ${data.models.join(', ') || 'none pulled yet'}</span>`;
+      // Show models panel
+      const panel = document.getElementById('ollamaModelsPanel');
+      const list = document.getElementById('ollamaModelsList');
+      list.innerHTML = data.models.map(m => `<span class="badge bg-secondary">${m}</span>`).join('');
+      panel.style.display = 'block';
+    } else {
+      resultEl.innerHTML = `<span class="text-danger">❌ ${data.message}</span>`;
+    }
+  } catch (err) {
+    resultEl.innerHTML = `<span class="text-danger">❌ Test failed: ${err.message}</span>`;
+  } finally {
+    CAIO.setLoading(this, false);
+  }
+});
+
+// Health check
+document.getElementById('checkHealth').addEventListener('click', async function() {
+  CAIO.setLoading(this, true);
+  document.getElementById('healthResults').innerHTML = '<span class="text-muted small">Checking…</span>';
+  try {
+    const r = await fetch('/health');
+    const data = await r.json();
+    const providerIcons = { ollama: '🖥️', openai: '🟢', claude: '🟣' };
+    let html = '';
+    for (const [name, info] of Object.entries(data.providers || {})) {
+      const icon = info.status === 'ok' ? '✅' : info.status === 'not_configured' ? '⚪' : '❌';
+      const detail = info.status === 'ok' ? (info.models ? `(${info.models.slice(0,3).join(', ')})` : '') :
+                     info.status === 'not_configured' ? 'Not configured' : (info.message || 'Error');
+      html += `<div class="setup-step" style="min-width:180px">
+        <div class="d-flex align-items-center gap-2">
+          <span style="font-size:20px">${icon}</span>
+          <div>
+            <div class="fw-bold" style="font-size:13px">${providerIcons[name]||''} ${name}</div>
+            <div class="text-muted" style="font-size:11px">${detail}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+    document.getElementById('healthResults').innerHTML = html;
+  } catch (e) {
+    document.getElementById('healthResults').innerHTML = `<span class="text-danger">Check failed: ${e.message}</span>`;
+  } finally {
+    CAIO.setLoading(this, false);
+  }
+});
+
+// Load on page open
+loadSettings();
+</script>
+{% endblock %}

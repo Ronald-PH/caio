@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Cost Dashboard — CAIO{% endblock %}
+{% block page_title %}<i class="bi bi-bar-chart-fill me-2"></i>Cost Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Summary cards -->
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon text-accent"><i class="bi bi-calculator-fill"></i></div>
+      <div class="stat-label">Total Cost (30d)</div>
+      <div class="stat-value">${{ "%.4f"|format(stats.total_cost) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="color:#22d3ee"><i class="bi bi-hash"></i></div>
+      <div class="stat-label">Total Tokens</div>
+      <div class="stat-value">{{ stats.total_tokens|default(0, true) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon" style="color:#f59e0b"><i class="bi bi-search"></i></div>
+      <div class="stat-label">Total Scans</div>
+      <div class="stat-value">{{ stats.total_scans|default(0, true) }}</div>
+    </div>
+  </div>
+
+  <!-- Chart: Daily cost -->
+  <div class="col-lg-7">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-graph-up"></i>
+        <span>Daily Cost Trend</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="dailyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breakdown by provider -->
+  <div class="col-lg-5">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-cloud-check"></i>
+        <span>Cost by Provider</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="providerChart" height="180"></canvas>
+        <div class="mt-3 small text-muted">
+          {% for p in stats.by_provider %}
+          <div class="d-flex justify-content-between">
+            <span>{{ p.ai_provider }}</span>
+            <span>${{ "%.4f"|format(p.cost) }} ({{ p.scan_count }} scans)</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breakdown by module -->
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-grid-3x3"></i>
+        <span>Cost by Module</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="moduleChart" height="180"></canvas>
+        <div class="mt-3 small text-muted">
+          {% for m in stats.by_module %}
+          <div class="d-flex justify-content-between">
+            <span>{{ m.module_type }}</span>
+            <span>${{ "%.4f"|format(m.cost) }} ({{ m.scan_count }} scans)</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cost table -->
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-table"></i>
+        <span>Recent Cost Details</span>
+      </div>
+      <div class="panel-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-dark mb-0">
+            <thead>
+              <tr><th>Date</th><th>Cost</th><th>Scans</th></tr>
+            </thead>
+            <tbody>
+              {% for day in stats.daily[-7:] %}
+              <tr>
+                <td>{{ day.date }}</td>
+                <td>${{ "%.4f"|format(day.cost) }}</td>
+                <td>{{ day.scans }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Daily chart
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+  type: 'line',
+  data: {
+    labels: {{ stats.daily|map(attribute='date')|list|tojson }},
+    datasets: [{
+      label: 'Cost (USD)',
+      data: {{ stats.daily|map(attribute='cost')|list|tojson }},
+      borderColor: '#f43f5e',
+      backgroundColor: 'rgba(244, 63, 94, 0.1)',
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#e2e8f0' } } }
+  }
+});
+
+// Provider pie chart
+const providerCtx = document.getElementById('providerChart').getContext('2d');
+new Chart(providerCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ stats.by_provider|map(attribute='ai_provider')|list|tojson }},
+    datasets: [{
+      data: {{ stats.by_provider|map(attribute='cost')|list|tojson }},
+      backgroundColor: ['#f43f5e', '#22d3ee', '#a78bfa', '#f59e0b']
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#e2e8f0' } } }
+  }
+});
+
+// Module bar chart
+const moduleCtx = document.getElementById('moduleChart').getContext('2d');
+new Chart(moduleCtx, {
+  type: 'bar',
+  data: {
+    labels: {{ stats.by_module|map(attribute='module_type')|list|tojson }},
+    datasets: [{
+      label: 'Cost (USD)',
+      data: {{ stats.by_module|map(attribute='cost')|list|tojson }},
+      backgroundColor: '#f59e0b'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#e2e8f0' } } }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CAIO{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+  <div class="hero-text">
+    <h1 class="hero-title">
+      <span class="text-accent">Cybersecurity</span> AI Orchestrator
+    </h1>
+    <p class="hero-sub">
+      AI-powered security analysis — recon, log forensics, vuln assessment, and incident response in one unified platform.
+    </p>
+  </div>
+  <div class="hero-badge">
+    <i class="bi bi-shield-shaded"></i>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon text-accent"><i class="bi bi-radar"></i></div>
+      <div class="stat-label">Recon Module</div>
+      <div class="stat-value">Active</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="color:#22d3ee"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="stat-label">Log Analysis</div>
+      <div class="stat-value">Active</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="color:#f59e0b"><i class="bi bi-bug"></i></div>
+      <div class="stat-label">Vuln Scan</div>
+      <div class="stat-value">Active</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="color:#a78bfa"><i class="bi bi-chat-dots"></i></div>
+      <div class="stat-label">IR Chat</div>
+      <div class="stat-value">Active</div>
+    </div>
+  </div>
+</div>
+
+<!-- Module cards -->
+<div class="row g-4">
+  <!-- Recon -->
+  <div class="col-md-6 col-xl-3">
+    <div class="module-card" data-module="recon">
+      <div class="module-card-header">
+        <div class="module-icon" style="--icon-color: #f43f5e;">
+          <i class="bi bi-radar"></i>
+        </div>
+        <span class="module-tag">OSINT</span>
+      </div>
+      <h3 class="module-title">Reconnaissance</h3>
+      <p class="module-desc">
+        DNS enumeration, subdomain discovery, port scanning, and WHOIS lookup — all analyzed by AI for attack surface insights.
+      </p>
+      <ul class="module-features">
+        <li><i class="bi bi-check2"></i> DNS A / MX / TXT records</li>
+        <li><i class="bi bi-check2"></i> Subdomain brute-force</li>
+        <li><i class="bi bi-check2"></i> Port scan (common ports)</li>
+        <li><i class="bi bi-check2"></i> WHOIS lookup</li>
+      </ul>
+      <a href="{{ url_for('recon.recon_page') }}" class="module-btn">
+        Launch <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Log Analysis -->
+  <div class="col-md-6 col-xl-3">
+    <div class="module-card" data-module="logs">
+      <div class="module-card-header">
+        <div class="module-icon" style="--icon-color: #22d3ee;">
+          <i class="bi bi-file-earmark-text-fill"></i>
+        </div>
+        <span class="module-tag">SOC</span>
+      </div>
+      <h3 class="module-title">Log Analysis</h3>
+      <p class="module-desc">
+        Paste Windows Event Logs, Apache logs, syslogs, or firewall logs — AI identifies IOCs, attack patterns, and anomalies.
+      </p>
+      <ul class="module-features">
+        <li><i class="bi bi-check2"></i> IOC extraction</li>
+        <li><i class="bi bi-check2"></i> Attack pattern detection</li>
+        <li><i class="bi bi-check2"></i> MITRE ATT&CK mapping</li>
+        <li><i class="bi bi-check2"></i> Timeline reconstruction</li>
+      </ul>
+      <a href="{{ url_for('log_analysis.log_page') }}" class="module-btn" style="--btn-color: #22d3ee;">
+        Launch <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Vuln Scan -->
+  <div class="col-md-6 col-xl-3">
+    <div class="module-card" data-module="vuln">
+      <div class="module-card-header">
+        <div class="module-icon" style="--icon-color: #f59e0b;">
+          <i class="bi bi-bug-fill"></i>
+        </div>
+        <span class="module-tag">AppSec</span>
+      </div>
+      <h3 class="module-title">Vuln Assessment</h3>
+      <p class="module-desc">
+        Analyze URLs for web vulnerabilities or upload code/configs (Dockerfile, requirements.txt) for AI-powered security review.
+      </p>
+      <ul class="module-features">
+        <li><i class="bi bi-check2"></i> SQLi / XSS / CSRF detection</li>
+        <li><i class="bi bi-check2"></i> Hardcoded secrets finder</li>
+        <li><i class="bi bi-check2"></i> Outdated dependency check</li>
+        <li><i class="bi bi-check2"></i> Security header analysis</li>
+      </ul>
+      <a href="{{ url_for('vuln_scan.vuln_page') }}" class="module-btn" style="--btn-color: #f59e0b;">
+        Launch <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- IR Chat -->
+  <div class="col-md-6 col-xl-3">
+    <div class="module-card" data-module="chat">
+      <div class="module-card-header">
+        <div class="module-icon" style="--icon-color: #a78bfa;">
+          <i class="bi bi-chat-dots-fill"></i>
+        </div>
+        <span class="module-tag">IR</span>
+      </div>
+      <h3 class="module-title">IR Chat</h3>
+      <p class="module-desc">
+        Real-time chat with a cybersecurity AI expert for incident response guidance, threat hunting, and forensic analysis.
+      </p>
+      <ul class="module-features">
+        <li><i class="bi bi-check2"></i> Multi-turn conversation</li>
+        <li><i class="bi bi-check2"></i> DFIR expertise</li>
+        <li><i class="bi bi-check2"></i> Command references</li>
+        <li><i class="bi bi-check2"></i> Threat hunting guidance</li>
+      </ul>
+      <a href="{{ url_for('chat.chat_page') }}" class="module-btn" style="--btn-color: #a78bfa;">
+        Launch <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Quick start callout -->
+<div class="callout-box mt-4">
+  <div class="callout-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+  <div class="callout-content">
+    <h4>Quick Start</h4>
+    <p>
+      Select your AI provider in the top-right, then pick a module above.
+      For local inference, ensure <code>ollama serve</code> is running and a model is pulled (e.g., <code>ollama pull llama3.2</code>).
+    </p>
+  </div>
+  <a href="{{ url_for('settings.settings_page') }}" class="btn btn-outline-accent">
+    <i class="bi bi-gear me-1"></i> Configure
+  </a>
+</div>
+{% endblock %}

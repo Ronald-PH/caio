@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}SIEM Rule Generator — CAIO{% endblock %}
+
+{% block page_title %}<i class="bi bi-rulers me-2" style="color:#22d3ee"></i>AI SIEM Rule Generator{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Input panel -->
+  <div class="col-xl-5">
+    <div class="panel h-100">
+      <div class="panel-header">
+        <i class="bi bi-lightbulb" style="color:#22d3ee"></i>
+        <span>Attack Description</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-3">
+        <div>
+          <label class="form-label">Attack Scenario</label>
+          <textarea id="attackDescription" class="form-control" rows="5" 
+            placeholder="Describe the attack behavior in plain English...&#10;&#10;Example:&#10;An attacker uses PowerShell to download a malicious script from a remote server, then creates a scheduled task for persistence, and finally attempts to exfiltrate data over HTTPS to a C2 domain."></textarea>
+          <div class="form-text">Be specific about commands, protocols, and artifacts.</div>
+        </div>
+
+        <div>
+          <label class="form-label">MITRE ATT&CK TTPs (optional)</label>
+          <input type="text" id="ttpInput" class="form-control" placeholder="e.g., T1059.001, T1547.001, T1041">
+        </div>
+
+        <div>
+          <label class="form-label">Environment</label>
+          <select id="environment" class="form-select">
+            <option value="Windows Enterprise with EDR">Windows Enterprise + EDR</option>
+            <option value="Linux with Auditd">Linux + Auditd</option>
+            <option value="Cloud-native (AWS/Azure)">Cloud-native</option>
+            <option value="Network with Zeek/Suricata">Network-based</option>
+            <option value="Mixed/On-premise">Mixed/On-premise</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label">AI Provider</label>
+          <select id="siemProvider" class="form-select">
+            <option value="ollama">🖥️ Ollama (Local)</option>
+            <option value="openai">🟢 OpenAI</option>
+            <option value="claude">🟣 Claude</option>
+          </select>
+        </div>
+
+        <button id="generateRulesBtn" class="btn w-100" style="background: #22d3ee; color: #0a0f1e; font-weight: 600;">
+          <i class="bi bi-file-code me-1"></i> Generate Detection Rules
+        </button>
+
+        <div class="alert alert-info small">
+          <i class="bi bi-info-circle me-1"></i>
+          Generates Sigma, Splunk SPL, KQL (Sentinel), and Suricata rules simultaneously.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results panel -->
+  <div class="col-xl-7">
+    <div id="siemProgress" class="panel mb-3 d-none">
+      <div class="panel-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="spinner-border text-info" role="status"></div>
+          <div>
+            <div class="fw-bold">Generating detection rules...</div>
+            <div class="text-muted small">Creating Sigma, SPL, KQL, and Suricata rules.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="siemResult" class="panel d-none">
+      <div class="panel-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-cpu me-1" style="color:#22d3ee"></i>Detection Rules</span>
+        <div class="d-flex gap-2">
+          <button class="btn-sm-action" id="copyAllRules"><i class="bi bi-clipboard"></i> Copy All</button>
+          <button class="btn-sm-action" id="exportRules"><i class="bi bi-download"></i> Export</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <!-- Tab navigation -->
+        <ul class="nav nav-tabs nav-tabs-dark mb-3" id="ruleTabs">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sigmaTab">Sigma</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#splunkTab">Splunk SPL</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#kqlTab">KQL (Sentinel)</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#suricataTab">Suricata</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="sigmaTab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn-sm-action copy-rule" data-rule="sigma"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+            <pre id="sigmaRule" class="code-output" style="font-size: 12px;"></pre>
+          </div>
+          <div class="tab-pane fade" id="splunkTab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn-sm-action copy-rule" data-rule="splunk"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+            <pre id="splunkRule" class="code-output" style="font-size: 12px;"></pre>
+          </div>
+          <div class="tab-pane fade" id="kqlTab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn-sm-action copy-rule" data-rule="kql"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+            <pre id="kqlRule" class="code-output" style="font-size: 12px;"></pre>
+          </div>
+          <div class="tab-pane fade" id="suricataTab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn-sm-action copy-rule" data-rule="suricata"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+            <pre id="suricataRule" class="code-output" style="font-size: 12px;"></pre>
+          </div>
+        </div>
+
+        <div id="techniquesDetected" class="mt-3 small text-muted"></div>
+      </div>
+    </div>
+
+    <div id="siemEmpty" class="panel">
+      <div class="panel-body empty-state">
+        <i class="bi bi-rulers display-3 text-muted"></i>
+        <h4 class="mt-3">No rules generated yet</h4>
+        <p class="text-muted">Describe an attack to generate detection rules in multiple formats.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let sigmaText = '', splunkText = '', kqlText = '', suricataText = '';
+
+document.getElementById('siemProvider').value = CAIO.getProvider();
+
+document.getElementById('generateRulesBtn').addEventListener('click', async function() {
+  const attackDescription = document.getElementById('attackDescription').value.trim();
+  const ttps = document.getElementById('ttpInput').value.trim();
+  const environment = document.getElementById('environment').value;
+  const provider = document.getElementById('siemProvider').value;
+
+  if (!attackDescription) {
+    CAIO.toast('Please describe the attack scenario.', 'error');
+    return;
+  }
+
+  CAIO.setLoading(this, true);
+  document.getElementById('siemProgress').classList.remove('d-none');
+  document.getElementById('siemResult').classList.add('d-none');
+  document.getElementById('siemEmpty').classList.add('d-none');
+
+  try {
+    const resp = await fetch('/siem-rules/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        attack_description: attackDescription, 
+        ttps: ttps,
+        environment: environment,
+        provider: provider 
+      })
+    });
+    const data = await resp.json();
+    
+    if (data.error) {
+      CAIO.toast(data.error, 'error');
+      document.getElementById('siemEmpty').classList.remove('d-none');
+      return;
+    }
+
+    sigmaText = data.sigma_rule || data.full_response || '';
+    splunkText = data.splunk_rule || '';
+    kqlText = data.kql_rule || '';
+    suricataText = data.suricata_rule || '';
+
+    document.getElementById('sigmaRule').textContent = sigmaText;
+    document.getElementById('splunkRule').textContent = splunkText;
+    document.getElementById('kqlRule').textContent = kqlText;
+    document.getElementById('suricataRule').textContent = suricataText;
+
+    if (data.techniques_detected && data.techniques_detected.length) {
+      document.getElementById('techniquesDetected').innerHTML = 
+        `<i class="bi bi-tag"></i> MITRE ATT&CK techniques detected: ${data.techniques_detected.join(', ')}`;
+    }
+
+    document.getElementById('siemResult').classList.remove('d-none');
+
+  } catch (err) {
+    CAIO.toast('Request failed: ' + err.message, 'error');
+    document.getElementById('siemEmpty').classList.remove('d-none');
+  } finally {
+    CAIO.setLoading(this, false);
+    document.getElementById('siemProgress').classList.add('d-none');
+  }
+});
+
+// Copy individual rules
+document.querySelectorAll('.copy-rule').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const ruleType = btn.dataset.rule;
+    let text = '';
+    if (ruleType === 'sigma') text = sigmaText;
+    else if (ruleType === 'splunk') text = splunkText;
+    else if (ruleType === 'kql') text = kqlText;
+    else if (ruleType === 'suricata') text = suricataText;
+    
+    if (text) CAIO.copyText(text);
+  });
+});
+
+document.getElementById('copyAllRules')?.addEventListener('click', () => {
+  const allRules = `# SIGMA Rule\n${sigmaText}\n\n# Splunk SPL\n${splunkText}\n\n# KQL\n${kqlText}\n\n# Suricata\n${suricataText}`;
+  CAIO.copyText(allRules);
+});
+
+document.getElementById('exportRules')?.addEventListener('click', () => {
+  const allRules = `# CAIO Detection Rules\nGenerated: ${new Date().toISOString()}\n\n## SIGMA Rule\n${sigmaText}\n\n## Splunk SPL\n${splunkText}\n\n## KQL (Sentinel)\n${kqlText}\n\n## Suricata\n${suricataText}`;
+  CAIO.exportMarkdown(allRules, 'caio-detection-rules.md');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CAIO — Cybersecurity AI Orchestrator{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <!-- Highlight.js for code formatting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Animated background grid -->
+<div class="bg-grid" aria-hidden="true"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <i class="bi bi-shield-shaded"></i>
+    </div>
+    <div class="brand-text">
+      <span class="brand-name">CAIO</span>
+      <span class="brand-sub">AI Orchestrator</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section-label">Modules</div>
+  <ul class="sidebar-nav">
+    <li>
+      <a href="{{ url_for('dashboard.index') }}" class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span>Dashboard</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('recon.recon_page') }}" class="nav-link {% if request.blueprint == 'recon' %}active{% endif %}">
+        <i class="bi bi-radar"></i>
+        <span>Recon</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('log_analysis.log_page') }}" class="nav-link {% if request.blueprint == 'log_analysis' %}active{% endif %}">
+        <i class="bi bi-file-earmark-text-fill"></i>
+        <span>Log Analysis</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('vuln_scan.vuln_page') }}" class="nav-link {% if request.blueprint == 'vuln_scan' %}active{% endif %}">
+        <i class="bi bi-bug-fill"></i>
+        <span>Vuln Scan</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('chat.chat_page') }}" class="nav-link {% if request.blueprint == 'chat' %}active{% endif %}">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span>IR Chat</span>
+      </a>
+    </li>
+  </ul>
+  <div class="sidebar-section-label">Threat Intel</div>
+  <ul class="sidebar-nav">
+      <li>
+          <a href="{{ url_for('osint_profiler.osint_page') }}" class="nav-link {% if request.blueprint == 'osint_profiler' %}active{% endif %}">
+              <i class="bi bi-person-bounding-box"></i>
+              <span>OSINT Profiler</span>
+          </a>
+      </li>
+      <li>
+          <a href="{{ url_for('email_forensics.email_page') }}" class="nav-link {% if request.blueprint == 'email_forensics' %}active{% endif %}">
+              <i class="bi bi-envelope-paper"></i>
+              <span>Email Forensics</span>
+          </a>
+      </li>
+      <li>
+          <a href="{{ url_for('password_auditor.password_page') }}" class="nav-link {% if request.blueprint == 'password_auditor' %}active{% endif %}">
+              <i class="bi bi-key"></i>
+              <span>Password Auditor</span>
+          </a>
+      </li>
+  </ul>
+
+  <div class="sidebar-section-label">Detection</div>
+  <ul class="sidebar-nav">
+      <li>
+          <a href="{{ url_for('siem_rule_generator.siem_page') }}" class="nav-link {% if request.blueprint == 'siem_rule_generator' %}active{% endif %}">
+              <i class="bi bi-rulers"></i>
+              <span>SIEM Rules</span>
+          </a>
+      </li>
+      <li>
+          <a href="{{ url_for('supply_chain_risk.supply_page') }}" class="nav-link {% if request.blueprint == 'supply_chain_risk' %}active{% endif %}">
+              <i class="bi bi-link"></i>
+              <span>Supply Chain</span>
+          </a>
+      </li>
+  </ul>
+
+  <div class="sidebar-section-label">Operations</div>
+  <ul class="sidebar-nav">
+      <li>
+          <a href="{{ url_for('batch_scanner.batch_page') }}" class="nav-link {% if request.blueprint == 'batch_scanner' %}active{% endif %}">
+              <i class="bi bi-files"></i>
+              <span>Batch Scanner</span>
+          </a>
+      </li>
+      <li>
+          <a href="{{ url_for('compliance_report.compliance_page') }}" class="nav-link {% if request.blueprint == 'compliance_report' %}active{% endif %}">
+              <i class="bi bi-file-check"></i>
+              <span>Compliance</span>
+          </a>
+      </li>
+  </ul>
+
+  <div class="sidebar-section-label">Advanced</div>
+  <ul class="sidebar-nav">
+    <li>
+      <a href="{{ url_for('threat_profiler.threat_page') }}" class="nav-link {% if request.blueprint == 'threat_profiler' %}active{% endif %}">
+        <i class="bi bi-shield-shaded"></i>
+        <span>Threat Profiler</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('payload_dna.payload_page') }}" class="nav-link {% if request.blueprint == 'payload_dna' %}active{% endif %}">
+        <i class="bi bi-bezier2"></i>
+        <span>Payload DNA</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('network_storyteller.story_page') }}" class="nav-link {% if request.blueprint == 'network_storyteller' %}active{% endif %}">
+        <i class="bi bi-diagram-3"></i>
+        <span>Net Storyteller</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('cve_feed.cve_page') }}" class="nav-link {% if request.blueprint == 'cve_feed' %}active{% endif %}">
+        <i class="bi bi-shield-exclamation"></i>
+        <span>CVE Feed</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('honeypot_simulator.honeypot_page') }}" class="nav-link {% if request.blueprint == 'honeypot_simulator' %}active{% endif %}">
+        <i class="bi bi-broadcast"></i>
+        <span>Honeypot Sim</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('redteam_playbook.playbook_page') }}" class="nav-link {% if request.blueprint == 'redteam_playbook' %}active{% endif %}">
+        <i class="bi bi-flag"></i>
+        <span>Red Team</span>
+      </a>
+    </li>
+  </ul>
+  <div class="sidebar-section-label">Analytics</div>
+  <ul class="sidebar-nav">
+    <li>
+      <a href="/history" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+        <i class="bi bi-clock-history"></i>
+        <span>History</span>
+      </a>
+    </li>
+    <li>
+      <a href="/cost-dashboard" class="nav-link {% if request.endpoint == 'cost_dashboard' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i>
+        <span>Cost Dashboard</span>
+      </a>
+    </li>
+  </ul>
+  <div class="sidebar-section-label">System</div>
+  <ul class="sidebar-nav">
+    <li>
+      <a href="{{ url_for('settings.settings_page') }}" class="nav-link {% if request.blueprint == 'settings' %}active{% endif %}">
+        <i class="bi bi-gear-fill"></i>
+        <span>Settings</span>
+      </a>
+    </li>
+  </ul>
+  <!-- Provider indicator -->
+  <div class="sidebar-footer">
+    <div class="provider-badge" id="providerBadge">
+      <span class="status-dot"></span>
+      <span id="providerLabel">Loading...</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Main content area -->
+<div class="main-wrapper">
+  <!-- Top bar -->
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="topbar-title">{% block page_title %}CAIO{% endblock %}</div>
+    <div class="topbar-actions">
+      <!-- AI Provider selector (global) -->
+      <div class="provider-selector">
+        <select id="globalProvider" class="form-select form-select-sm" title="AI Provider">
+          <option value="ollama">🖥️ Ollama (Local)</option>
+          <option value="openai">🟢 OpenAI GPT-4o</option>
+          <option value="claude">🟣 Claude</option>
+        </select>
+      </div>
+      <button id="themeToggle" class="btn-icon" title="Toggle theme">
+        <i class="bi bi-moon-fill" id="themeIcon"></i>
+      </button>
+      <a href="{{ url_for('settings.settings_page') }}" class="btn-icon" title="Settings">
+        <i class="bi bi-gear"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Page content -->
+  <main class="page-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer mt-4 pt-3 pb-3 border-top" style="margin-top: auto;">
+    <div class="container-fluid">
+      <div class="d-flex flex-wrap justify-content-between align-items-center">
+        <div class="text-muted small">
+          &copy; {{ now.year if now else 2026 }} <a href="https://github.com/Ronald-PH" target="_blank" class="text-decoration-none" style="color: var(--accent);">Ronald-PH</a>. 
+          Cybersecurity AI Orchestrator (CAIO) — Defensive Security Tool
+        </div>
+        <div class="d-flex gap-3">
+          <a href="https://github.com/Ronald-PH/caio" target="_blank" class="text-muted small text-decoration-none">
+            <i class="bi bi-github"></i> GitHub
+          </a>
+          <span class="text-muted small">Version 1.0.0</span> 
+          <span class="text-muted small">
+            <i class="bi bi-shield-shaded"></i> Licensed under MIT
+          </span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div id="mainToast" class="toast" role="alert">
+    <div class="toast-header">
+      <i class="bi bi-shield me-2 text-accent"></i>
+      <strong class="me-auto">CAIO</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastBody"></div>
+  </div>
+</div>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+// Global modal cleanup to prevent backdrop stacking
+document.addEventListener('hidden.bs.modal', function (event) {
+  // Remove any lingering modal backdrops
+  const backdrops = document.querySelectorAll('.modal-backdrop');
+  backdrops.forEach(backdrop => backdrop.remove());
+  
+  // Fix body class and style
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+}, false);
+
+// Also handle AJAX navigation if needed
+window.addEventListener('load', function() {
+  // Ensure no stray backdrops on page load
+  const backdrops = document.querySelectorAll('.modal-backdrop');
+  backdrops.forEach(backdrop => backdrop.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+});
+</script>
+<script>
+// ── Global utilities ──────────────────────────────────────────
+
+const CAIO = {
+  // Get the selected AI provider
+  getProvider() {
+    return document.getElementById('globalProvider')?.value || 'ollama';
+  },
+
+  // Show a toast notification
+  toast(msg, type = 'info') {
+    const toast = document.getElementById('mainToast');
+    const body = document.getElementById('toastBody');
+    body.textContent = msg;
+    toast.className = `toast text-bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'dark'}`;
+    bootstrap.Toast.getOrCreateInstance(toast).show();
+  },
+
+  // Render markdown in an element
+  renderMarkdown(el, text) {
+    if (!text) return;
+    el.innerHTML = marked.parse(text);
+    el.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+  },
+
+  // Copy text to clipboard
+  async copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      CAIO.toast('Copied to clipboard!', 'success');
+    } catch {
+      CAIO.toast('Copy failed — try manually.', 'error');
+    }
+  },
+
+  // Export text as Markdown file
+  exportMarkdown(text, filename = 'caio-result.md') {
+    const blob = new Blob([text], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  // Show/hide spinner in a button
+  setLoading(btn, loading) {
+    if (loading) {
+      btn.dataset.originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing...';
+      btn.disabled = true;
+    } else {
+      btn.innerHTML = btn.dataset.originalText || 'Submit';
+      btn.disabled = false;
+    }
+  }
+};
+
+// Sidebar toggle
+document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  document.querySelector('.main-wrapper').classList.toggle('sidebar-collapsed');
+});
+
+// Persist provider selection
+const savedProvider = localStorage.getItem('caio_provider') || 'ollama';
+const sel = document.getElementById('globalProvider');
+if (sel) {
+  sel.value = savedProvider;
+  sel.addEventListener('change', () => {
+    localStorage.setItem('caio_provider', sel.value);
+    updateProviderBadge(sel.value);
+  });
+  updateProviderBadge(savedProvider);
+}
+
+// Dark / light theme toggle
+// Dark / light theme toggle with proper Bootstrap integration
+(function() {
+  const savedTheme = localStorage.getItem('caio_theme') || 'dark';
+  applyTheme(savedTheme);
+})();
+
+function applyTheme(theme) {
+  // Set data-bs-theme attribute for Bootstrap
+  document.documentElement.setAttribute('data-bs-theme', theme);
+  
+  // Update icon
+  const icon = document.getElementById('themeIcon');
+  if (icon) {
+    icon.className = theme === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+  }
+  
+  // Store preference
+  localStorage.setItem('caio_theme', theme);
+  
+  // Force body background update
+  document.body.style.backgroundColor = theme === 'dark' ? '#070b14' : '#f8f9fa';
+}
+
+document.getElementById('themeToggle')?.addEventListener('click', () => {
+  const current = localStorage.getItem('caio_theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+});
+
+function updateProviderBadge(provider) {
+  const label = document.getElementById('providerLabel');
+  const icons = { ollama: '🖥️ Ollama', openai: '🟢 OpenAI', claude: '🟣 Claude' };
+  if (label) label.textContent = icons[provider] || provider;
+}
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Reconnaissance — CAIO{% endblock %}
+{% block page_title %}<i class="bi bi-radar me-2 text-danger"></i>Reconnaissance{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Input panel -->
+  <div class="col-xl-4">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-crosshair2 text-danger"></i>
+        <span>Target Configuration</span>
+      </div>
+      <div class="panel-body">
+        <div class="mb-3">
+          <label class="form-label">Target Domain / IP</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-globe2"></i></span>
+            <input type="text" id="reconTarget" class="form-control" placeholder="example.com or 192.168.1.1">
+          </div>
+          <div class="form-text">Ensure you have permission to scan this target.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">AI Provider</label>
+          <select id="reconProvider" class="form-select">
+            <option value="ollama">🖥️ Ollama (Local)</option>
+            <option value="openai">🟢 OpenAI GPT-4o</option>
+            <option value="claude">🟣 Claude</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Model Override <span class="text-muted">(optional)</span></label>
+          <input type="text" id="reconModel" class="form-control" placeholder="e.g. llama3.2, gpt-4o">
+        </div>
+
+        <div class="scan-checklist mb-3">
+          <div class="checklist-item active"><i class="bi bi-check-circle-fill text-success"></i> DNS Enumeration</div>
+          <div class="checklist-item active"><i class="bi bi-check-circle-fill"></i> Subdomain Brute-force</div>
+          <div class="checklist-item active"><i class="bi bi-check-circle-fill"></i> Port Scan (common ports)</div>
+          <div class="checklist-item active"><i class="bi bi-check-circle-fill"></i> WHOIS Lookup</div>
+          <div class="checklist-item active"><i class="bi bi-check-circle-fill"></i> AI Attack Surface Analysis</div>
+        </div>
+
+        <button id="startRecon" class="btn btn-danger w-100">
+          <i class="bi bi-play-fill me-1"></i> Start Recon
+        </button>
+
+        <div class="alert alert-warning mt-3 small">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          <strong>Legal Notice:</strong> Only scan domains/IPs you own or have explicit written permission to test.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results panel -->
+  <div class="col-xl-8">
+    <!-- Progress -->
+    <div id="reconProgress" class="panel mb-3 d-none">
+      <div class="panel-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="spinner-border text-danger" role="status"></div>
+          <div>
+            <div class="fw-bold" id="progressLabel">Initializing scan...</div>
+            <div class="text-muted small">This may take 30–120 seconds depending on the target.</div>
+          </div>
+        </div>
+        <div class="progress" style="height:6px">
+          <div class="progress-bar bg-danger" id="progressBar" style="width:0%;transition:width 0.4s"></div>
+        </div>
+        <div class="text-muted small mt-1" id="progressPct">0%</div>
+      </div>
+    </div>
+
+    <!-- Raw data tabs -->
+    <div id="reconResults" class="d-none">
+      <div class="panel mb-3">
+        <div class="panel-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-terminal me-1"></i>Scan Results</span>
+          <div class="d-flex gap-2">
+            <button class="btn-sm-action" id="copyRawBtn"><i class="bi bi-clipboard"></i> Copy Raw</button>
+            <button class="btn-sm-action" id="exportBtn"><i class="bi bi-download"></i> Export .md</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="nav nav-tabs nav-tabs-dark mb-3" id="reconTabs">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDns">DNS</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSubs">Subdomains</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPorts">Ports</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabWhois">WHOIS</button></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tabDns"><pre class="code-output" id="dnsOutput">—</pre></div>
+            <div class="tab-pane fade" id="tabSubs"><pre class="code-output" id="subOutput">—</pre></div>
+            <div class="tab-pane fade" id="tabPorts"><pre class="code-output" id="portsOutput">—</pre></div>
+            <div class="tab-pane fade" id="tabWhois"><pre class="code-output" id="whoisOutput">—</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <i class="bi bi-cpu me-1 text-accent"></i>
+          <span>AI Attack Surface Analysis</span>
+          <span class="ms-auto badge bg-danger" id="aiProviderBadge">AI</span>
+        </div>
+        <div class="panel-body">
+          <div id="aiAnalysis" class="markdown-output"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="reconEmpty" class="panel">
+      <div class="panel-body empty-state">
+        <i class="bi bi-radar display-3 text-muted"></i>
+        <h4 class="mt-3">No scan running</h4>
+        <p class="text-muted">Enter a target and click Start Recon to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let rawSummary = '';
+let aiText = '';
+let pollTimer = null;
+
+document.getElementById('globalProvider').addEventListener('change', function() {
+  document.getElementById('reconProvider').value = this.value;
+});
+document.getElementById('reconProvider').value = CAIO.getProvider();
+document.getElementById('reconProvider').addEventListener('change', function() {
+  document.getElementById('globalProvider').value = this.value;
+  localStorage.setItem('caio_provider', this.value);
+});
+
+document.getElementById('startRecon').addEventListener('click', async function() {
+  const target = document.getElementById('reconTarget').value.trim();
+  const provider = document.getElementById('reconProvider').value;
+  const model = document.getElementById('reconModel').value.trim();
+
+  if (!target) { CAIO.toast('Please enter a target.', 'error'); return; }
+
+  CAIO.setLoading(this, true);
+  document.getElementById('reconProgress').classList.remove('d-none');
+  document.getElementById('reconResults').classList.add('d-none');
+  document.getElementById('reconEmpty').classList.add('d-none');
+  setProgress(0, 'Submitting job…');
+
+  try {
+    const resp = await fetch('/recon/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target, provider, model }),
+    });
+    const data = await resp.json();
+    if (data.error) { CAIO.toast(data.error, 'error'); showEmpty(); return; }
+
+    const jobId = data.job_id;
+    pollJob(jobId, target, provider);
+
+  } catch (err) {
+    CAIO.toast('Request failed: ' + err.message, 'error');
+    showEmpty();
+    document.getElementById('startRecon').innerHTML = '<i class="bi bi-play-fill me-1"></i> Start Recon';
+    document.getElementById('startRecon').disabled = false;
+  }
+});
+
+function setProgress(pct, msg) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = msg || '';
+}
+
+function showEmpty() {
+  document.getElementById('reconProgress').classList.add('d-none');
+  document.getElementById('reconEmpty').classList.remove('d-none');
+  document.getElementById('startRecon').innerHTML = '<i class="bi bi-play-fill me-1"></i> Start Recon';
+  document.getElementById('startRecon').disabled = false;
+}
+
+function pollJob(jobId, target, provider) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch('/progress/' + jobId);
+      const job = await r.json();
+
+      setProgress(job.progress, job.message);
+
+      if (job.status === 'completed') {
+        clearInterval(pollTimer);
+        const data = JSON.parse(job.result);
+        displayResults(data, provider);
+        document.getElementById('startRecon').innerHTML = '<i class="bi bi-play-fill me-1"></i> Start Recon';
+        document.getElementById('startRecon').disabled = false;
+        document.getElementById('reconProgress').classList.add('d-none');
+
+      } else if (job.status === 'error') {
+        clearInterval(pollTimer);
+        CAIO.toast('Scan error: ' + job.message, 'error');
+        showEmpty();
+      }
+    } catch (err) {
+      clearInterval(pollTimer);
+      CAIO.toast('Polling failed: ' + err.message, 'error');
+      showEmpty();
+    }
+  }, 2000);
+}
+
+function displayResults(data, provider) {
+  document.getElementById('dnsOutput').textContent =
+    `A Records:  ${JSON.stringify(data.dns.A)}\nMX Records: ${JSON.stringify(data.dns.MX)}\nTXT Records: ${JSON.stringify(data.dns.TXT)}\nErrors: ${JSON.stringify(data.dns.errors)}`;
+
+  document.getElementById('subOutput').textContent =
+    data.subdomains.length ? data.subdomains.join('\n') : 'No subdomains discovered.';
+
+  document.getElementById('portsOutput').textContent =
+    data.ports.length
+      ? data.ports.map(p => `Port ${p.port.toString().padEnd(6)} OPEN   ${p.banner}`).join('\n')
+      : 'No open ports found in the scanned range.';
+
+  document.getElementById('whoisOutput').textContent = data.whois || 'No WHOIS data.';
+
+  aiText = data.ai_analysis || '';
+  rawSummary = data.raw_summary || '';
+  CAIO.renderMarkdown(document.getElementById('aiAnalysis'), aiText);
+  document.getElementById('aiProviderBadge').textContent = provider.toUpperCase();
+
+  document.getElementById('reconResults').classList.remove('d-none');
+}
+
+document.getElementById('copyRawBtn')?.addEventListener('click', () => {
+  CAIO.copyText(`${rawSummary}\n\n---\n\n${aiText}`);
+});
+document.getElementById('exportBtn')?.addEventListener('click', () => {
+  const target = document.getElementById('reconTarget').value.trim();
+  CAIO.exportMarkdown(`# CAIO Recon Report: ${target}\n\n## Raw Data\n\n\`\`\`\n${rawSummary}\n\`\`\`\n\n## AI Analysis\n\n${aiText}`, `caio-recon-${target}.md`);
+});
+</script>
+{% endblock %}

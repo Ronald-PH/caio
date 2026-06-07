@@ -1,0 +1,27 @@
+2026-06-08 00:33:56,421 [INFO] database: Database initialized at D:\cybersecurity\caio-production\caio.db
+2026-06-08 00:33:56,467 [INFO] __main__: CAIO application initialised successfully.
+2026-06-08 00:33:56,469 [INFO] __main__: Starting CAIO on http://127.0.0.1:5000
+2026-06-08 00:33:56,489 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-06-08 00:33:56,489 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-06-08 00:33:56,489 [INFO] werkzeug:  * Restarting with stat
+2026-06-08 00:33:56,797 [INFO] database: Database initialized at D:\cybersecurity\caio-production\caio.db
+2026-06-08 00:33:56,817 [INFO] __main__: CAIO application initialised successfully.
+2026-06-08 00:33:56,819 [INFO] __main__: Starting CAIO on http://127.0.0.1:5000
+2026-06-08 00:33:56,824 [WARNING] werkzeug:  * Debugger is active!
+2026-06-08 00:33:56,834 [INFO] werkzeug:  * Debugger PIN: 138-720-727
+2026-06-08 00:34:01,866 [INFO] werkzeug: 127.0.0.1 - - [08/Jun/2026 00:34:01] "GET / HTTP/1.1" 200 -
+2026-06-08 00:34:01,934 [INFO] werkzeug: 127.0.0.1 - - [08/Jun/2026 00:34:01] "GET /static/style.css HTTP/1.1" 200 -
+2026-06-08 00:34:02,092 [INFO] werkzeug: 127.0.0.1 - - [08/Jun/2026 00:34:02] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-06-08 00:45:39,607 [INFO] database: Database initialized at D:\cybersecurity\caio-production\caio.db
+2026-06-08 00:45:39,647 [INFO] __main__: CAIO application initialised successfully.
+2026-06-08 00:45:39,647 [INFO] __main__: Starting CAIO on http://127.0.0.1:5000
+2026-06-08 00:45:39,677 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-06-08 00:45:39,677 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-06-08 00:45:39,679 [INFO] werkzeug:  * Restarting with stat
+2026-06-08 00:45:39,975 [INFO] database: Database initialized at D:\cybersecurity\caio-production\caio.db
+2026-06-08 00:45:39,992 [INFO] __main__: CAIO application initialised successfully.
+2026-06-08 00:45:39,992 [INFO] __main__: Starting CAIO on http://127.0.0.1:5000
+2026-06-08 00:45:40,018 [WARNING] werkzeug:  * Debugger is active!
+2026-06-08 00:45:40,020 [INFO] werkzeug:  * Debugger PIN: 138-720-727

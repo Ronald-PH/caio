@@ -1,0 +1,216 @@
+{% extends "base.html" %} {% block title %}Threat Actor Profiler — CAIO{%
+endblock %} {% block page_title %}<i
+  class="bi bi-shield-shaded me-2"
+  style="color: #a78bfa"
+></i
+>AI Threat Actor Profiler{% endblock %} {% block content %}
+<div class="row g-4">
+  <!-- Input panel -->
+  <div class="col-xl-5">
+    <div class="panel h-100">
+      <div class="panel-header">
+        <i class="bi bi-person-badge" style="color: #a78bfa"></i>
+        <span>IOC & TTP Input</span>
+      </div>
+      <div class="panel-body d-flex flex-column gap-3">
+        <div>
+          <label class="form-label">Input Type</label>
+          <select id="threatInputType" class="form-select">
+            <option value="iocs">
+              Indicators of Compromise (IPs, domains, hashes)
+            </option>
+            <option value="ttps">
+              Tactics, Techniques, Procedures (behavior descriptions)
+            </option>
+            <option value="log_snippet">Log Snippet</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label">AI Provider</label>
+          <select id="threatProvider" class="form-select">
+            <option value="ollama">🖥️ Ollama (Local)</option>
+            <option value="openai">🟢 OpenAI GPT-4o</option>
+            <option value="claude">🟣 Claude</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label"
+            >Model Override <span class="text-muted">(optional)</span></label
+          >
+          <input
+            type="text"
+            id="threatModel"
+            class="form-control"
+            placeholder="e.g. llama3.2"
+          />
+        </div>
+
+        <div class="flex-grow-1">
+          <label class="form-label d-flex justify-content-between">
+            <span>Indicators / TTPs / Logs</span>
+            <span id="threatCharCount" class="text-muted small">0 chars</span>
+          </label>
+          <textarea
+            id="threatInput"
+            class="form-control log-textarea"
+            rows="12"
+            placeholder="Paste IOCs, TTPs, or log snippets...&#10;&#10;Example IOCs:&#10;IP: 45.33.32.156&#10;Domain: malicious.xyz&#10;Hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855&#10;&#10;Example TTPs:&#10;- Phishing emails with Excel macros&#10;- PowerShell downloads from external domain&#10;- Scheduled tasks for persistence&#10;- RDP lateral movement"
+          ></textarea>
+        </div>
+
+        <button
+          id="profileBtn"
+          class="btn w-100"
+          style="background: #a78bfa; color: #0a0f1e; font-weight: 600"
+        >
+          <i class="bi bi-search me-1"></i> Identify Threat Actor
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results panel -->
+  <div class="col-xl-7">
+    <div id="threatProgress" class="panel mb-3 d-none">
+      <div class="panel-body">
+        <div class="d-flex align-items-center gap-3">
+          <div
+            class="spinner-border"
+            style="color: #a78bfa"
+            role="status"
+          ></div>
+          <div>
+            <div class="fw-bold">Correlating with threat intelligence...</div>
+            <div class="text-muted small">
+              Identifying APT groups and MITRE ATT&CK techniques.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="threatResult" class="panel d-none">
+      <div
+        class="panel-header d-flex justify-content-between align-items-center"
+      >
+        <span
+          ><i class="bi bi-cpu me-1" style="color: #a78bfa"></i>Threat Actor
+          Analysis</span
+        >
+        <div class="d-flex gap-2">
+          <button class="btn-sm-action" id="copyThreatResult">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+          <button class="btn-sm-action" id="exportThreatResult">
+            <i class="bi bi-download"></i> Export .md
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="threatAnalysisOutput" class="markdown-output"></div>
+      </div>
+    </div>
+
+    <div id="threatEmpty" class="panel">
+      <div class="panel-body empty-state">
+        <i class="bi bi-person-badge display-3 text-muted"></i>
+        <h4 class="mt-3">No analysis yet</h4>
+        <p class="text-muted">
+          Enter IOCs, TTPs, or log snippets to identify threat actors.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}  {# end content #}
+
+{% block extra_scripts %}
+<script>
+  let threatAnalysisText = "";
+
+  const globalProviderEl = document.getElementById("globalProvider");
+  if (globalProviderEl) {
+    globalProviderEl.addEventListener("change", function () {
+      document.getElementById("threatProvider").value = this.value;
+    });
+  }
+
+  document.getElementById("threatProvider").value = CAIO.getProvider();
+  document
+    .getElementById("threatProvider")
+    .addEventListener("change", function () {
+      if (globalProviderEl) globalProviderEl.value = this.value;
+      localStorage.setItem("caio_provider", this.value);
+    });
+
+  document.getElementById("threatInput").addEventListener("input", function () {
+    document.getElementById("threatCharCount").textContent =
+      this.value.length.toLocaleString() + " chars";
+  });
+
+  document
+    .getElementById("profileBtn")
+    .addEventListener("click", async function () {
+      const inputData = document.getElementById("threatInput").value.trim();
+      const provider = document.getElementById("threatProvider").value;
+      const model = document.getElementById("threatModel").value.trim();
+      const inputType = document.getElementById("threatInputType").value;
+
+      if (!inputData) {
+        CAIO.toast("Please enter IOCs or TTPs to analyze.", "error");
+        return;
+      }
+
+      CAIO.setLoading(this, true);
+      document.getElementById("threatProgress").classList.remove("d-none");
+      document.getElementById("threatResult").classList.add("d-none");
+      document.getElementById("threatEmpty").classList.add("d-none");
+
+      try {
+        const resp = await fetch("/threat-profiler/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input_data: inputData,
+            provider,
+            model,
+            input_type: inputType,
+          }),
+        });
+        const data = await resp.json();
+        if (data.error) {
+          CAIO.toast(data.error, "error");
+          document.getElementById("threatEmpty").classList.remove("d-none");
+          return;
+        }
+
+        threatAnalysisText = data.analysis || "";
+        CAIO.renderMarkdown(
+          document.getElementById("threatAnalysisOutput"),
+          threatAnalysisText,
+        );
+        document.getElementById("threatResult").classList.remove("d-none");
+      } catch (err) {
+        CAIO.toast("Request failed: " + err.message, "error");
+        document.getElementById("threatEmpty").classList.remove("d-none");
+      } finally {
+        CAIO.setLoading(this, false);
+        document.getElementById("threatProgress").classList.add("d-none");
+      }
+    });
+
+  document
+    .getElementById("copyThreatResult")
+    ?.addEventListener("click", () => CAIO.copyText(threatAnalysisText));
+  document
+    .getElementById("exportThreatResult")
+    ?.addEventListener("click", () => {
+      CAIO.exportMarkdown(
+        `# CAIO Threat Actor Profile\n\n${threatAnalysisText}`,
+        "caio-threat-profile.md",
+      );
+    });
+</script>
+{% endblock %}

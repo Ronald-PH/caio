@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Scan History — CAIO{% endblock %}
+{% block page_title %}<i class="bi bi-clock-history me-2"></i>Scan History{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-funnel-fill"></i>
+        <span>Filters</span>
+      </div>
+      <div class="panel-body">
+        <form method="GET" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Module</label>
+            <select name="module" class="form-select">
+              <option value="">All</option>
+              <option value="recon" {% if filters.module == 'recon' %}selected{% endif %}>Reconnaissance</option>
+              <option value="log_analysis" {% if filters.module == 'log_analysis' %}selected{% endif %}>Log Analysis</option>
+              <option value="vuln_scan" {% if filters.module == 'vuln_scan' %}selected{% endif %}>Vulnerability Scan</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Provider</label>
+            <select name="provider" class="form-select">
+              <option value="">All</option>
+              <option value="ollama" {% if filters.provider == 'ollama' %}selected{% endif %}>Ollama</option>
+              <option value="openai" {% if filters.provider == 'openai' %}selected{% endif %}>OpenAI</option>
+              <option value="claude" {% if filters.provider == 'claude' %}selected{% endif %}>Claude</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Target contains</label>
+            <input type="text" name="target" class="form-control" value="{{ filters.target }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Last N days</label>
+            <input type="number" name="days" class="form-control" value="{{ filters.days }}" placeholder="All">
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-list-ul"></i>
+        <span>Scans ({{ scans|length }})</span>
+      </div>
+      <div class="panel-body p-0">
+        {% if scans %}
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0" style="background: transparent;">
+            <thead>
+              <tr>
+                <th>ID</th><th>Module</th><th>Target</th><th>Provider</th><th>Tokens</th><th>Cost</th><th>Date</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for scan in scans %}
+              <tr>
+                <td>{{ scan.id }}</td>
+                <td><span class="badge bg-secondary">{{ scan.module_type }}</span></td>
+                <td>{{ scan.target[:50] }}{% if scan.target|length > 50 %}...{% endif %}</td>
+                <td>{{ scan.ai_provider }}</td>
+                <td>{{ scan.tokens_used|default(0, true) }}</td>
+                <td>${{ "%.4f"|format(scan.cost_estimate|default(0, true)) }}</td>
+                <td>{{ scan.created_at[:16] }}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline-info view-detail" data-id="{{ scan.id }}"><i class="bi bi-eye"></i></button>
+                  <button class="btn btn-sm btn-outline-danger delete-scan" data-id="{{ scan.id }}"><i class="bi bi-trash"></i></button>
+                  <a href="/export/pdf/{{ scan.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-pdf"></i></a>
+                 </td>
+               </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="bi bi-inbox display-3 text-muted"></i>
+          <h4 class="mt-3">No scans found</h4>
+          <p class="text-muted">Run some analyses to see them here.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Modal (no Bootstrap JS issues) -->
+<div id="detailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow: auto;">
+  <div style="position: relative; width: 90%; max-width: 900px; margin: 50px auto; background: #0d1424; border: 1px solid rgba(244,63,94,0.3); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+    <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+      <h5 style="margin: 0; color: #f43f5e;">Scan Details</h5>
+      <button onclick="closeModal()" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+    <div style="padding: 20px; max-height: 60vh; overflow-y: auto;" id="modalContent">
+      Loading...
+    </div>
+    <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
+      <button onclick="closeModal()" class="btn btn-secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Modal functions
+function showModal(content) {
+  const modal = document.getElementById('detailModal');
+  document.getElementById('modalContent').innerHTML = content;
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  const modal = document.getElementById('detailModal');
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('detailModal');
+    if (modal.style.display === 'block') {
+      closeModal();
+    }
+  }
+});
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// View detail buttons
+document.querySelectorAll('.view-detail').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.dataset.id;
+    showModal('<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p>Loading...</p></div>');
+    
+    try {
+      const resp = await fetch(`/history/${id}`);
+      const data = await resp.json();
+      
+      const content = `
+        <h6>Target: ${escapeHtml(data.target)}</h6>
+        <p><strong>Module:</strong> ${escapeHtml(data.module_type)}<br>
+        <strong>Provider:</strong> ${escapeHtml(data.ai_provider)}<br>
+        <strong>Date:</strong> ${escapeHtml(data.created_at)}<br>
+        <strong>Tokens:</strong> ${data.tokens_used || 0}<br>
+        <strong>Cost:</strong> $${(data.cost_estimate || 0).toFixed(6)}</p>
+        <hr>
+        <div class="markdown-output" id="modalMarkdown"></div>
+      `;
+      
+      document.getElementById('modalContent').innerHTML = content;
+      
+      // Render markdown
+      const markdownDiv = document.getElementById('modalMarkdown');
+      if (data.result_text) {
+        markdownDiv.innerHTML = marked.parse(data.result_text);
+        // Highlight code blocks if hljs is available
+        if (typeof hljs !== 'undefined') {
+          markdownDiv.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+          });
+        }
+      }
+    } catch (err) {
+      document.getElementById('modalContent').innerHTML = `<div class="alert alert-danger">Error loading details: ${err.message}</div>`;
+    }
+  });
+});
+
+// Delete buttons
+document.querySelectorAll('.delete-scan').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!confirm('Delete this scan record?')) return;
+    const id = btn.dataset.id;
+    try {
+      await fetch(`/history/${id}/delete`, { method: 'POST' });
+      location.reload();
+    } catch (err) {
+      CAIO.toast('Failed to delete scan', 'error');
+    }
+  });
+});
+</script>
+{% endblock %}
